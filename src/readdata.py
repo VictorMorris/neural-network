@@ -4,6 +4,8 @@
 import numpy as np # linear algebra
 import struct
 from array import array
+import random
+import matplotlib.pyplot as plt
 #
 # MNIST Data Loader Class
 #
@@ -44,8 +46,7 @@ class MnistDataloader(object):
 #
 # Verify Reading Dataset via MnistDataloader class
 #
-import random
-import matplotlib.pyplot as plt
+
 
 #
 # Set file paths based on added MNIST Datasets
