@@ -23,7 +23,7 @@ class App:
         self.x_train = x_train
         self.y_train = y_train
         self.network = network
-        self.current_index = 500
+        self.current_index = random.randint(0, len(self.x_train) - 1)
         self.num_correct = 0
         self.num_guess = 0
 
@@ -54,6 +54,8 @@ class App:
 
         self.result_label = tk.Label(mainframe, text="", font=("Arial", 14))
         self.result_label.grid(row=3, column=0, pady=5)
+
+        self.predict()
 
     def show_image(self):
         image = self.x_train[self.current_index]
@@ -95,7 +97,8 @@ def main():
         v[label] = 1.0
         return v
     training_data = [(x, to_one_hot(y)) for x, y in zip(x_train, y_train)]
-    network.SGD(training_data, 30, 10, 3.0)
+    test_data = [(x, to_one_hot(y)) for x, y in zip(x_test, y_test)]
+    network.SGD(training_data, 30, 10, 3.0, test_data=test_data)
 
     root = tk.Tk()
     root.protocol("WM_DELETE_WINDOW", lambda: _quit(root))

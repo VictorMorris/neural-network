@@ -37,9 +37,9 @@ class Network:
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta) # One gradient step per batch
             if test_data:
-                print(f"Epoch {j}: {self.evaluate(test_data)} / {n_test}")
+                print(f"Epoch {j+1}: {self.evaluate(test_data)} / {n_test}")
             else:
-                print(f"Epoch {j} complete")
+                print(f"Epoch {j+1} complete")
 
     def update_mini_batch(self, mini_batch, eta):
         """Apply one gradient descent step"""
@@ -91,7 +91,7 @@ class Network:
     
     def evaluate(self, test_data):
         """Accuracy check"""
-        test_results = [(np.argmax(self.feed_forward(x)), y) for (x,y) in test_data]
+        test_results = [(np.argmax(self.feed_forward(x)), np.argmax(y)) for (x,y) in test_data]
         return sum(int(x==y) for (x,y) in test_results) # Count correct predictions
     
     def cost_derivative(self, output_activations, y):
