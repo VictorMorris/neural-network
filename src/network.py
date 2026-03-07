@@ -16,6 +16,9 @@ class Network:
         # Has a column for every nueron in the layer
         self.weights = [np.random.default_rng().standard_normal(size=(y, x)) for x, y in zip(sizes[:-1], sizes[1:])]
 
+        self.test_errors = np.array([])
+
+
     def feed_forward(self, data):
         a = data
         for w, b in zip(self.weights, self.biases):
@@ -26,7 +29,7 @@ class Network:
         # A column matrix of length sizes[-1] (One activation for every neuron in the output layer)
         return a
     
-    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
+    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None, epoch_callback=None):
         """Stocastic Gradient Descent"""
         if test_data: n_test = len(test_data)
         n = len(training_data) # Total samples
@@ -37,9 +40,15 @@ class Network:
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta) # One gradient step per batch
             if test_data:
+                test_error = 100*(1-(self.evaluate(test_data)/n_test))
+                self.test_errors = np.append(self.test_errors, test_error)
                 print(f"Epoch {j+1}: {self.evaluate(test_data)} / {n_test}")
+                if epoch_callback:
+                    epoch_callback(test_error)
             else:
                 print(f"Epoch {j+1} complete")
+                if epoch_callback:
+                    epoch_callback(None)
 
     def update_mini_batch(self, mini_batch, eta):
         """Apply one gradient descent step"""
