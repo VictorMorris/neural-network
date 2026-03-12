@@ -20,6 +20,8 @@ TEST_LABELS     = 'input/t10k-labels.idx1-ubyte'
 
 
 class App:
+    CELL_SIZE = 10  # pixels per cell in the drawing canvas
+
     def __init__(self, root, x_train, y_train, network, training_data, test_data):
         self.root = root
         self.x_train = x_train
@@ -34,6 +36,7 @@ class App:
         self._graph_dirty = False
         self._lock = threading.Lock()
         self.flash_time = 10  # ms between image flashes during training
+        self.draw_pixels = np.zeros((28, 28))  # drawing canvas pixel data
 
         root.title("VictorNet 0.2")
         root.columnconfigure(0, weight=1)
@@ -92,9 +95,82 @@ class App:
         self.prediction_label = tk.Label(self.mainframe, text="", font=("Arial", 14))
         self.result_label = tk.Label(self.mainframe, text="", font=("Arial", 14))
 
+        self._build_draw_panel()
+
         self.canvas_img.get_tk_widget().grid(row=0, column=0)
         self.canvas_graph.get_tk_widget().grid(row=0, column=1)
         self.training_label.grid(row=1, column=0, pady=10)
+
+    # Drawing canvas panel
+    def _build_draw_panel(self):
+        cs = self.CELL_SIZE
+        self.draw_frame = ttk.LabelFrame(self.mainframe, text="Draw a Digit", padding="10 10 10 10")
+
+        self.draw_canvas = tk.Canvas(
+            self.draw_frame, width=28 * cs, height=28 * cs,
+            bg="black", cursor="crosshair",
+        )
+        self.draw_canvas.grid(row=0, column=0, columnspan=3)
+
+        # Mouse bindings
+        self.draw_canvas.bind("<B1-Motion>", self._draw_on_canvas)
+        self.draw_canvas.bind("<Button-1>", self._draw_on_canvas)
+        self.draw_canvas.bind("<B3-Motion>", self._erase_on_canvas)
+        self.draw_canvas.bind("<Button-3>", self._erase_on_canvas)
+
+        # Buttons
+        btn_row = ttk.Frame(self.draw_frame)
+        btn_row.grid(row=1, column=0, columnspan=3, pady=(8, 0))
+        tk.Button(btn_row, text="Reset", command=self._draw_reset).grid(row=0, column=0, padx=4)
+        tk.Button(btn_row, text="Randomize", command=self._draw_randomize).grid(row=0, column=1, padx=4)
+        tk.Button(btn_row, text="Predict", command=self._draw_predict).grid(row=0, column=2, padx=4)
+
+        self.draw_prediction_label = tk.Label(self.draw_frame, text="", font=("Arial", 14))
+        self.draw_prediction_label.grid(row=2, column=0, columnspan=3, pady=(6, 0))
+
+    def _render_draw_canvas(self):
+        cs = self.CELL_SIZE
+        self.draw_canvas.delete("all")
+        for y in range(28):
+            for x in range(28):
+                color = "white" if self.draw_pixels[y][x] else "black"
+                self.draw_canvas.create_rectangle(
+                    x * cs, y * cs, (x + 1) * cs, (y + 1) * cs,
+                    fill=color, outline="",
+                )
+
+    def _set_pixel(self, event, value):
+        cs = self.CELL_SIZE
+        gx, gy = event.x // cs, event.y // cs
+        if 0 <= gx < 28 and 0 <= gy < 28:
+            self.draw_pixels[gy][gx] = value
+            color = "white" if value else "black"
+            self.draw_canvas.create_rectangle(
+                gx * cs, gy * cs, (gx + 1) * cs, (gy + 1) * cs,
+                fill=color, outline="",
+            )
+
+    def _draw_on_canvas(self, event):
+        self._set_pixel(event, 1)
+
+    def _erase_on_canvas(self, event):
+        self._set_pixel(event, 0)
+
+    def _draw_reset(self):
+        self.draw_pixels = np.zeros((28, 28))
+        self._render_draw_canvas()
+        self.draw_prediction_label.config(text="")
+
+    def _draw_randomize(self):
+        self.draw_pixels = np.random.default_rng().integers(low=0, high=2, size=(28, 28)).astype(float)
+        self._render_draw_canvas()
+        self.draw_prediction_label.config(text="")
+
+    def _draw_predict(self):
+        input_vec = self.draw_pixels.reshape(784, 1).astype(float)
+        activations = self.network.feed_forward(input_vec)
+        guess = int(np.argmax(activations))
+        self.draw_prediction_label.config(text=f"Network thinks: {guess}")
 
     def _start_training(self):
         try:
@@ -155,6 +231,9 @@ class App:
         self.prediction_label.grid(row=2, column=0, pady=5)
         self.result_label.grid(row=3, column=0, pady=5)
         self.predict()
+        # Show the drawing panel
+        self.draw_frame.grid(row=0, column=2, rowspan=4, padx=(10, 0), sticky="n")
+        self._render_draw_canvas()
 
     def _training_loop(self):
         """Runs on the main thread via after(); cycles images and refreshes the graph."""
@@ -188,6 +267,8 @@ class App:
         self.num_guess += 1
         self.prediction_label.config(text=f"Network thinks: {guess}")
         self.result_label.config(text=f"{self.num_correct}/{self.num_guess}")
+
+    
 
 
 def _quit(root):

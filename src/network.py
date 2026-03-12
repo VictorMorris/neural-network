@@ -39,6 +39,7 @@ class Network:
             mini_batches = [training_data[k:k+mini_batch_size] for k in range(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta) # One gradient step per batch
+            # Update the graph for every epoch completed
             if test_data:
                 test_error = 100*(1-(self.evaluate(test_data)/n_test))
                 self.test_errors = np.append(self.test_errors, test_error)
